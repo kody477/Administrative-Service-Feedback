@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>行政服务部 - 投诉建议系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif; background: #f5f7fa; min-height: 100vh; }
+
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px 60px; text-align: center; color: white; border-radius: 0 0 30px 30px; }
+        .header h1 { font-size: 26px; font-weight: 700; margin-bottom: 8px; }
+        .header p { font-size: 14px; opacity: 0.9; }
+
+        .container { max-width: 100%; margin: -30px auto 0; padding: 0 15px; position: relative; z-index: 10; }
+
+        .nav-tabs { display: flex; background: white; border-radius: 12px; padding: 4px; margin-bottom: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+        .nav-tab { flex: 1; padding: 12px; text-align: center; border-radius: 8px; font-size: 14px; color: #666; cursor: pointer; transition: all 0.3s; }
+        .nav-tab.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: 500; }
+
+        .page { display: none; }
+        .page.active { display: block; }
+
+        .services-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
+        .service-card { background: white; border-radius: 16px; padding: 16px 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); display: flex; flex-direction: column; align-items: center; text-align: center; border: 1px solid #f0f0f0; cursor: pointer; transition: all 0.3s; }
+        .service-card:active { transform: scale(0.96); }
+        .service-photo { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 28px; margin-bottom: 10px; border: 3px solid rgba(102, 126, 234, 0.15); }
+        .service-title { font-size: 15px; font-weight: 600; color: #333; margin-bottom: 6px; }
+        .service-manager { font-size: 12px; color: #666; margin-bottom: 2px; }
+        .service-phone { font-size: 12px; color: #667eea; font-weight: 500; margin-bottom: 12px; }
+        .service-tag { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 500; }
+
+        .form-container { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+        .form-title { font-size: 18px; font-weight: 600; color: #333; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 14px; color: #333; margin-bottom: 6px; font-weight: 500; }
+        .form-group .required::after { content: ' *'; color: #ff4d4f; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 12px 16px; border: 1px solid #e8e8e8; border-radius: 12px; font-size: 15px; background: #fafafa; }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline: none; border-color: #667eea; background: white; }
+        .form-group textarea { resize: vertical; min-height: 100px; }
+
+        .photo-upload { border: 2px dashed #d9d9d9; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; background: #fafafa; }
+        .photo-upload.has-photo { border-style: solid; border-color: #667eea; background: white; padding: 10px; }
+        .photo-preview { max-width: 100%; max-height: 200px; border-radius: 8px; display: none; }
+        .photo-preview.active { display: block; }
+        .upload-content { display: block; }
+        .upload-content.hidden { display: none; }
+        .remove-photo { display: none; margin-top: 8px; color: #ff4d4f; font-size: 13px; cursor: pointer; }
+        .remove-photo.active { display: inline-block; }
+        #photoInput { display: none; }
+
+        .submit-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 10px; }
+        .submit-btn:active { transform: translateY(2px); }
+
+        .list-container { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+        .list-title { font-size: 18px; font-weight: 600; color: #333; margin-bottom: 16px; }
+        .feedback-item { border-bottom: 1px solid #f0f0f0; padding: 16px 0; }
+        .feedback-item:last-child { border-bottom: none; }
+        .feedback-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .feedback-service { font-size: 14px; font-weight: 600; color: #333; }
+        .feedback-status { font-size: 12px; padding: 4px 12px; border-radius: 12px; }
+        .status-pending { background: #fff7e6; color: #fa8c16; }
+        .status-processing { background: #e6f7ff; color: #1890ff; }
+        .status-completed { background: #f6ffed; color: #52c41a; }
+        .feedback-area { font-size: 13px; color: #666; margin-bottom: 6px; }
+        .feedback-content { font-size: 14px; color: #333; margin-bottom: 8px; line-height: 1.5; }
+        .feedback-time { font-size: 12px; color: #999; }
+
+        .progress-bar { width: 100%; height: 8px; background: #f0f0f0; border-radius: 4px; margin: 8px 0; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); border-radius: 4px; transition: width 0.3s; }
+
+        .rating-section { margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e8e8e8; }
+        .rating-stars { display: flex; gap: 8px; margin-bottom: 8px; }
+        .star { font-size: 24px; color: #ddd; cursor: pointer; transition: all 0.2s; }
+        .star.active { color: #ffa500; }
+        .rating-input { width: 100%; padding: 10px; border: 1px solid #e8e8e8; border-radius: 8px; font-size: 14px; margin-bottom: 8px; }
+        .rating-btn { padding: 8px 16px; background: #52c41a; color: white; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; }
+
+        .empty-state { text-align: center; padding: 40px 20px; color: #999; }
+        .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+
+        .footer-info { text-align: center; padding: 20px; color: #999; font-size: 12px; margin-top: 20px; }
+
+        .toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 8px; font-size: 14px; z-index: 9999; display: none; }
+        .toast.show { display: block; }
+
+        /* 隐藏式管理员入口 - 只有知道的人才能找到 */
+        .hidden-admin { position: fixed; bottom: 10px; right: 10px; width: 20px; height: 20px; opacity: 0.1; cursor: pointer; z-index: 100; }
+        .hidden-admin:hover { opacity: 0.5; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏢 行政服务部</h1>
+        <p>投诉建议 · 进度查询 · 服务评价</p>
+    </div>
+
+    <div class="container">
+        <div class="nav-tabs">
+            <div class="nav-tab active" onclick="switchTab('submit')">📝 提交反馈</div>
+            <div class="nav-tab" onclick="switchTab('list')">📋 我的反馈</div>
+        </div>
+
+        <div class="page active" id="page-submit">
+            <div class="services-grid">
+                <div class="service-card" onclick="selectService('cleaning')">
+                    <div class="service-photo">🧹</div>
+                    <div class="service-title">清洁服务</div>
+                    <div class="service-manager">张阿姨</div>
+                    <div class="service-phone">138-0000-0001</div>
+                    <div class="service-tag">点击反馈</div>
+                </div>
+                <div class="service-card" onclick="selectService('dormitory')">
+                    <div class="service-photo">🏠</div>
+                    <div class="service-title">宿舍服务</div>
+                    <div class="service-manager">李主管</div>
+                    <div class="service-phone">138-0000-0002</div>
+                    <div class="service-tag">点击反馈</div>
+                </div>
+                <div class="service-card" onclick="selectService('canteen')">
+                    <div class="service-photo">🍽️</div>
+                    <div class="service-title">食堂服务</div>
+                    <div class="service-manager">王经理</div>
+                    <div class="service-phone">138-0000-0003</div>
+                    <div class="service-tag">点击反馈</div>
+                </div>
+                <div class="service-card" onclick="selectService('security')">
+                    <div class="service-photo">🔒</div>
+                    <div class="service-title">安保服务</div>
+                    <div class="service-manager">刘队长</div>
+                    <div class="service-phone">138-0000-0004</div>
+                    <div class="service-tag">点击反馈</div>
+                </div>
+                <div class="service-card" onclick="selectService('commute')">
+                    <div class="service-photo">🚌</div>
+                    <div class="service-title">通勤服务</div>
+                    <div class="service-manager">陈调度</div>
+                    <div class="service-phone">138-0000-0005</div>
+                    <div class="service-tag">点击反馈</div>
+                </div>
+                <div class="service-card" onclick="selectService('maintenance')">
+                    <div class="service-photo">🔧</div>
+                    <div class="service-title">维修服务</div>
+                    <div class="service-manager">赵师傅</div>
+                    <div class="service-phone">138-0000-0006</div>
+                    <div class="service-tag">点击反馈</div>
+                </div>
+            </div>
+
+            <div class="form-container" id="feedbackForm" style="display:none;">
+                <div class="form-title">
+                    <span id="selectedIcon">🧹</span>
+                    <span id="selectedTitle">清洁服务</span>
+                </div>
+                <form onsubmit="submitFeedback(event)">
+                    <input type="hidden" id="serviceType" value="">
+                    <div class="form-group">
+                        <label class="required">所在区域</label>
+                        <input type="text" id="area" placeholder="请输入所在区域，如：A区、3号楼等" required>
+                    </div>
+                    <div class="form-group">
+                        <label>反馈照片（选填）</label>
+                        <div class="photo-upload" id="photoUpload" onclick="document.getElementById('photoInput').click()">
+                            <div class="upload-content" id="uploadContent">
+                                <div style="font-size:32px;margin-bottom:8px;">📷</div>
+                                <div>点击上传照片</div>
+                                <div style="font-size:12px;color:#999;margin-top:4px;">支持 JPG、PNG 格式</div>
+                            </div>
+                            <img class="photo-preview" id="photoPreview" alt="预览">
+                            <div class="remove-photo" id="removePhoto" onclick="removePhoto(event)">删除照片</div>
+                        </div>
+                        <input type="file" id="photoInput" accept="image/*" onchange="handlePhotoSelect(event)">
+                    </div>
+                    <div class="form-group">
+                        <label class="required">反馈内容</label>
+                        <textarea id="content" placeholder="请详细描述您的问题或建议..." required></textarea>
+                    </div>
+                    <button type="submit" class="submit-btn">提交反馈</button>
+                    <button type="button" class="submit-btn" style="background:#999;margin-top:8px;" onclick="cancelForm()">取消</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="page" id="page-list">
+            <div class="list-container">
+                <div class="list-title">我的反馈记录</div>
+                <div id="feedbackList">
+                    <div class="empty-state">
+                        <div class="icon">📋</div>
+                        <div>暂无反馈记录</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer-info">行政服务部 · 让服务更贴心</div>
+
+    <!-- 隐藏式管理员入口：点击页面右下角透明区域进入 -->
+    <a href="admin.html" class="hidden-admin" title="管理员入口"></a>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const serviceData = {
+            cleaning: { title: '清洁服务', icon: '🧹', manager: '张阿姨', phone: '138-0000-0001' },
+            dormitory: { title: '宿舍服务', icon: '🏠', manager: '李主管', phone: '138-0000-0002' },
+            canteen: { title: '食堂服务', icon: '🍽️', manager: '王经理', phone: '138-0000-0003' },
+            security: { title: '安保服务', icon: '🔒', manager: '刘队长', phone: '138-0000-0004' },
+            commute: { title: '通勤服务', icon: '🚌', manager: '陈调度', phone: '138-0000-0005' },
+            maintenance: { title: '维修服务', icon: '🔧', manager: '赵师傅', phone: '138-0000-0006' }
+        };
+
+        let feedbacks = JSON.parse(localStorage.getItem('feedbacks') || '[]');
+        let selectedPhoto = null;
+
+        function switchTab(tab) {
+            document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('page-' + tab).classList.add('active');
+            if (tab === 'list') renderFeedbackList();
+        }
+
+        function selectService(serviceType) {
+            const data = serviceData[serviceType];
+            document.getElementById('serviceType').value = serviceType;
+            document.getElementById('selectedIcon').textContent = data.icon;
+            document.getElementById('selectedTitle').textContent = data.title;
+            document.getElementById('feedbackForm').style.display = 'block';
+            document.querySelector('.services-grid').style.display = 'none';
+        }
+
+        function cancelForm() {
+            document.getElementById('feedbackForm').style.display = 'none';
+            document.querySelector('.services-grid').style.display = 'grid';
+            document.getElementById('feedbackForm').querySelector('form').reset();
+            removePhoto();
+        }
+
+        function handlePhotoSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                selectedPhoto = file;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('photoPreview').src = e.target.result;
+                    document.getElementById('photoPreview').classList.add('active');
+                    document.getElementById('photoUpload').classList.add('has-photo');
+                    document.getElementById('uploadContent').classList.add('hidden');
+                    document.getElementById('removePhoto').classList.add('active');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function removePhoto(event) {
+            if (event) event.stopPropagation();
+            selectedPhoto = null;
+            document.getElementById('photoInput').value = '';
+            document.getElementById('photoPreview').src = '';
+            document.getElementById('photoPreview').classList.remove('active');
+            document.getElementById('photoUpload').classList.remove('has-photo');
+            document.getElementById('uploadContent').classList.remove('hidden');
+            document.getElementById('removePhoto').classList.remove('active');
+        }
+
+        function submitFeedback(event) {
+            event.preventDefault();
+            const serviceType = document.getElementById('serviceType').value;
+            const data = serviceData[serviceType];
+
+            const feedback = {
+                id: Date.now(),
+                serviceType: serviceType,
+                serviceName: data.title,
+                icon: data.icon,
+                area: document.getElementById('area').value,
+                content: document.getElementById('content').value,
+                photo: selectedPhoto ? document.getElementById('photoPreview').src : null,
+                status: 'pending',
+                progress: 0,
+                result: '',
+                rating: 0,
+                ratingContent: '',
+                createTime: new Date().toLocaleString('zh-CN'),
+                updateTime: new Date().toLocaleString('zh-CN')
+            };
+
+            feedbacks.unshift(feedback);
+            localStorage.setItem('feedbacks', JSON.stringify(feedbacks));
+            showToast('✅ 反馈提交成功！');
+            cancelForm();
+            switchTab('list');
+        }
+
+        function renderFeedbackList() {
+            const container = document.getElementById('feedbackList');
+            if (feedbacks.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="icon">📋</div><div>暂无反馈记录</div></div>';
+                return;
+            }
+
+            container.innerHTML = feedbacks.map(item => `
+                <div class="feedback-item">
+                    <div class="feedback-header">
+                        <span class="feedback-service">${item.icon} ${item.serviceName}</span>
+                        <span class="feedback-status status-${item.status}">${item.status === 'pending' ? '待处理' : item.status === 'processing' ? '处理中' : '已完成'}</span>
+                    </div>
+                    <div class="feedback-area">📍 ${item.area}</div>
+                    <div class="feedback-content">${item.content}</div>
+                    ${item.photo ? '<img src="' + item.photo + '" style="max-width:100%;max-height:150px;border-radius:8px;margin-bottom:8px;">' : ''}
+                    ${item.status !== 'pending' ? `
+                        <div style="margin:8px 0;">
+                            <div style="display:flex;justify-content:space-between;font-size:12px;color:#666;margin-bottom:4px;">
+                                <span>处理进度</span><span>${item.progress}%</span>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill" style="width:${item.progress}%"></div></div>
+                        </div>
+                    ` : ''}
+                    ${item.result ? `<div style="font-size:13px;color:#52c41a;background:#f6ffed;padding:8px;border-radius:6px;margin-top:8px;">✅ ${item.result}</div>` : ''}
+                    ${item.status === 'completed' && !item.rating ? `
+                        <div class="rating-section">
+                            <div style="font-size:13px;color:#666;margin-bottom:8px;">请对本次服务进行评价：</div>
+                            <div class="rating-stars" id="stars-${item.id}">
+                                <span class="star" onclick="setRating(${item.id}, 1)">⭐</span>
+                                <span class="star" onclick="setRating(${item.id}, 2)">⭐</span>
+                                <span class="star" onclick="setRating(${item.id}, 3)">⭐</span>
+                                <span class="star" onclick="setRating(${item.id}, 4)">⭐</span>
+                                <span class="star" onclick="setRating(${item.id}, 5)">⭐</span>
+                            </div>
+                            <input type="text" class="rating-input" id="ratingContent-${item.id}" placeholder="请输入评价内容（选填）">
+                            <button class="rating-btn" onclick="submitRating(${item.id})">提交评价</button>
+                        </div>
+                    ` : ''}
+                    ${item.rating ? `<div class="rating-section"><div style="color:#ffa500;font-size:16px;">${'⭐'.repeat(item.rating)}</div>${item.ratingContent ? `<div style="font-size:13px;color:#666;margin-top:4px;">${item.ratingContent}</div>` : ''}</div>` : ''}
+                    <div class="feedback-time">${item.createTime}</div>
+                </div>
+            `).join('');
+        }
+
+        let currentRating = {};
+        function setRating(id, rating) {
+            currentRating[id] = rating;
+            const stars = document.querySelectorAll(`#stars-${id} .star`);
+            stars.forEach((star, index) => {
+                if (index < rating) star.classList.add('active');
+                else star.classList.remove('active');
+            });
+        }
+
+        function submitRating(id) {
+            const rating = currentRating[id] || 0;
+            if (rating === 0) { showToast('请选择评分星级'); return; }
+            const content = document.getElementById(`ratingContent-${id}`).value;
+            const item = feedbacks.find(f => f.id === id);
+            if (item) {
+                item.rating = rating;
+                item.ratingContent = content;
+                localStorage.setItem('feedbacks', JSON.stringify(feedbacks));
+                showToast('✅ 评价提交成功！');
+                renderFeedbackList();
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+    </script>
+</body>
+</html>

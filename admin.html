@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>行政服务部 - 管理后台</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; color: white; }
+        .header h1 { font-size: 20px; }
+        .container { max-width: 800px; margin: 20px auto; padding: 0 15px; }
+        .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+        .stat-card { background: white; padding: 16px; border-radius: 12px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .stat-number { font-size: 28px; font-weight: 700; color: #667eea; }
+        .stat-label { font-size: 13px; color: #666; margin-top: 4px; }
+        .filter-bar { background: white; padding: 12px; border-radius: 12px; margin-bottom: 16px; display: flex; gap: 8px; overflow-x: auto; }
+        .filter-btn { padding: 8px 16px; border: none; border-radius: 20px; font-size: 14px; cursor: pointer; background: #f0f0f0; color: #666; white-space: nowrap; }
+        .filter-btn.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .feedback-list { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .feedback-item { border-bottom: 1px solid #f0f0f0; padding: 16px 0; }
+        .feedback-item:last-child { border-bottom: none; }
+        .feedback-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+        .feedback-title { font-weight: 600; color: #333; }
+        .feedback-time { font-size: 12px; color: #999; }
+        .feedback-content { color: #666; font-size: 14px; margin: 8px 0; }
+        .feedback-area { font-size: 13px; color: #667eea; margin-bottom: 8px; }
+        .action-btns { display: flex; gap: 8px; margin-top: 12px; }
+        .action-btn { padding: 8px 16px; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; }
+        .btn-process { background: #1890ff; color: white; }
+        .btn-complete { background: #52c41a; color: white; }
+        .progress-input { width: 60px; padding: 4px 8px; border: 1px solid #d9d9d9; border-radius: 4px; text-align: center; }
+        .result-input { flex: 1; padding: 8px; border: 1px solid #d9d9d9; border-radius: 6px; font-size: 13px; }
+        .empty { text-align: center; padding: 40px; color: #999; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏢 行政服务部 - 管理后台</h1>
+    </div>
+
+    <div class="container">
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="stat-pending">0</div>
+                <div class="stat-label">待处理</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="stat-processing">0</div>
+                <div class="stat-label">处理中</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="stat-completed">0</div>
+                <div class="stat-label">已完成</div>
+            </div>
+        </div>
+
+        <div class="filter-bar">
+            <button class="filter-btn active" onclick="filterStatus('all')">全部</button>
+            <button class="filter-btn" onclick="filterStatus('pending')">待处理</button>
+            <button class="filter-btn" onclick="filterStatus('processing')">处理中</button>
+            <button class="filter-btn" onclick="filterStatus('completed')">已完成</button>
+        </div>
+
+        <div class="feedback-list" id="feedbackList">
+            <div class="empty">暂无反馈数据</div>
+        </div>
+    </div>
+
+    <script>
+        let feedbacks = JSON.parse(localStorage.getItem('feedbacks') || '[]');
+        let currentFilter = 'all';
+
+        function render() {
+            // 统计
+            const stats = { pending: 0, processing: 0, completed: 0 };
+            feedbacks.forEach(f => stats[f.status]++);
+            document.getElementById('stat-pending').textContent = stats.pending;
+            document.getElementById('stat-processing').textContent = stats.processing;
+            document.getElementById('stat-completed').textContent = stats.completed;
+
+            // 列表
+            const list = document.getElementById('feedbackList');
+            let filtered = feedbacks;
+            if (currentFilter !== 'all') {
+                filtered = feedbacks.filter(f => f.status === currentFilter);
+            }
+
+            if (filtered.length === 0) {
+                list.innerHTML = '<div class="empty">暂无反馈数据</div>';
+                return;
+            }
+
+            list.innerHTML = filtered.map(item => `
+                <div class="feedback-item">
+                    <div class="feedback-header">
+                        <span class="feedback-title">${item.icon} ${item.serviceName}</span>
+                        <span class="feedback-time">${item.createTime}</span>
+                    </div>
+                    <div class="feedback-area">📍 ${item.area}</div>
+                    <div class="feedback-content">${item.content}</div>
+                    ${item.photo ? '<img src="' + item.photo + '" style="max-width:200px;max-height:150px;border-radius:8px;margin:8px 0;">' : ''}
+
+                    <div style="margin:12px 0;padding:12px;background:#f5f5f5;border-radius:8px;">
+                        <div style="font-size:13px;color:#666;margin-bottom:8px;">
+                            当前状态：<strong style="color:${item.status === 'completed' ? '#52c41a' : item.status === 'processing' ? '#1890ff' : '#fa8c16'};">
+                                ${item.status === 'pending' ? '待处理' : item.status === 'processing' ? '处理中' : '已完成'}
+                            </strong>
+                            ${item.progress > 0 ? ' | 进度：' + item.progress + '%' : ''}
+                        </div>
+
+                        ${item.status !== 'completed' ? `
+                            <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+                                <span style="font-size:13px;color:#666;">更新进度：</span>
+                                <input type="number" class="progress-input" id="progress-${item.id}" value="${item.progress}" min="0" max="100">%
+                            </div>
+                            <div style="display:flex;gap:8px;">
+                                <input type="text" class="result-input" id="result-${item.id}" placeholder="请输入处理结果（用户可见）" value="${item.result || ''}">
+                                ${item.status === 'pending' ? `<button class="action-btn btn-process" onclick="updateStatus(${item.id}, 'processing')">开始处理</button>` : ''}
+                                <button class="action-btn btn-complete" onclick="complete(${item.id})">完成</button>
+                            </div>
+                        ` : `
+                            <div style="color:#52c41a;font-size:13px;">✅ ${item.result || '已处理完成'}</div>
+                            ${item.rating ? `<div style="margin-top:8px;color:#ffa500;">用户评分：${'⭐'.repeat(item.rating)}</div>` : ''}
+                        `}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterStatus(status) {
+            currentFilter = status;
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            render();
+        }
+
+        function updateStatus(id, status) {
+            const item = feedbacks.find(f => f.id === id);
+            if (item) {
+                item.status = status;
+                item.progress = document.getElementById(`progress-${id}`).value;
+                item.result = document.getElementById(`result-${id}`).value;
+                item.updateTime = new Date().toLocaleString('zh-CN');
+                localStorage.setItem('feedbacks', JSON.stringify(feedbacks));
+                render();
+            }
+        }
+
+        function complete(id) {
+            const item = feedbacks.find(f => f.id === id);
+            if (item) {
+                item.status = 'completed';
+                item.progress = 100;
+                item.result = document.getElementById(`result-${id}`).value || '问题已处理完成';
+                item.updateTime = new Date().toLocaleString('zh-CN');
+                localStorage.setItem('feedbacks', JSON.stringify(feedbacks));
+                render();
+            }
+        }
+
+        // 每秒刷新
+        setInterval(() => {
+            feedbacks = JSON.parse(localStorage.getItem('feedbacks') || '[]');
+            render();
+        }, 1000);
+
+        render();
+    </script>
+</body>
+</html>
